@@ -47,20 +47,22 @@ class Styler(StylerBase):
 
             # particle velocity, [N,3]
             if 'p' in self.target_field:
+                print('-----zxc p based')
                 p_opt_ph = tf.compat.v1.placeholder(dtype=tf.float32, shape=p_shp, name='p_opt_ph%d' % i)
                 self.opt_ph.append(p_opt_ph)
                 p_opt = tf.Variable(p_opt_ph, validate_shape=False, name='p_opt%d' % i)
-                self.opt.append(p_opt)
+                self.opt.append(p_opt)#zxc updatable var 和下面的if二选一
                 p_opt_ = tf.reshape(p_opt, tf.shape(p_opt_ph))
                 p_opt_ = tf.expand_dims(p_opt_, axis=0)
                 v_ = p_opt_
                 self.v.append(v_[0])
-                p_ += v_
+                p_ += v_#zxc
 
             p.append(p_[0])
 
             # particle density, [N,nk]
             if 'd' in self.target_field:
+                print('-----zxc den based')
                 r_ = tf.compat.v1.placeholder(dtype=tf.float32, shape=r_shp, name='r%d' % i)
                 self.r.append(r_)
                 r_ = tf.expand_dims(r_, axis=0) # [1,N,nk]
@@ -130,7 +132,7 @@ class Styler(StylerBase):
         ####
         # rotate 3d smoke for rendering
         if self.rotate:
-            d, self.rot_mat = rotate(d) # [B,D,H,W,1] or [B,D,H,W,4]
+            d, self.rot_mat = rotate(d) #zxc [B,D,H,W,1] or [B,D,H,W,4]
             self.d_out_rot = d
 
             # compute rotation matrices
@@ -144,7 +146,7 @@ class Styler(StylerBase):
             print('# vps:', self.n_views)
             assert(self.n_views % self.v_batch == 0)
 
-        # render 3d volume
+        # render 3d volume zxc
         if self.render_liquid:
             # d = tf.reduce_max(d, axis=1) # [B,H,W,1]
             transmit = tf.exp(-tf.cumsum(d[:,::-1], axis=1)*self.transmit)
@@ -242,7 +244,7 @@ class Styler(StylerBase):
         dhw = np.array(self.resolution)
         for _ in range(self.octave_n):
             oct_size.append(dhw)
-            dhw = (dhw//self.octave_scale).astype(np.int)
+            dhw = (dhw//self.octave_scale).astype(int)
         oct_size.reverse()
         print('input size for each octave', oct_size)
 
@@ -256,8 +258,8 @@ class Styler(StylerBase):
                 p_opt = np.zeros(shape=p_opt_shp, dtype=np.float32)
                 g_opt.append(p_opt)
 
-        if 'd' in self.target_field:
-            r = params['r']
+        if 'd' in self.target_field:#zxc density
+            r = params['r']#zxc
             for i in range(self.num_frames):
                 n = p[i].shape[0]
                 r_opt_shp = [n, self.num_kernels]
@@ -275,11 +277,11 @@ class Styler(StylerBase):
             feed = {}
             feed[self.res] = oct_size[octave]
             if self.content_img is not None:
-                feed[self.content_feature] = self._content_feature(
+                feed[self.content_feature] = self._content_feature(#zxc feed into contentfeature
                     self.content_img, oct_size[octave][1:])
 
-            if self.style_img is not None:
-                style_features = self._style_feature(
+            if self.style_img is not None:#zxc
+                style_features = self._style_feature(#里面有sess.run
                     self.style_img, oct_size[octave][1:])
                 
                 for i in range(len(self.style_features)):
@@ -298,13 +300,13 @@ class Styler(StylerBase):
                 lr = self.lr
 
             # optimizer list for each batch
-            for step in trange(self.iter,desc='iter'):
+            for step in trange(self.iter,desc='iter'):#zxc iter loop 很耗时
                 g_tmp = [None]*self.num_frames
 
                 for t in range(0,self.num_frames,self.batch_size*self.interp):
                     for i in range(self.batch_size):
-                        feed[self.p[i]] = p[t+i*self.interp]
-                        feed[self.opt_ph[i]] = g_opt[t+i*self.interp]
+                        feed[self.p[i]] = p[t+i*self.interp]#zxc
+                        feed[self.opt_ph[i]] = g_opt[t+i*self.interp]#zxc feed Opt
                         if 'd' in self.target_field:
                             feed[self.r[i]] = r[t+i*self.interp]
                     
@@ -318,8 +320,8 @@ class Styler(StylerBase):
                         train_op = opt_[opt_id]
                     else:
                         opt = tf.compat.v1.train.AdamOptimizer(learning_rate=self.opt_lr)
-                        train_op = opt.minimize(self.total_loss, var_list=self.opt)
-                        self.sess.run(tf.compat.v1.variables_initializer(opt.variables()), feed)
+                        train_op = opt.minimize(self.total_loss, var_list=self.opt)#zxc
+                        self.sess.run(tf.compat.v1.variables_initializer(opt.variables()), feed)#feed放入graph，run
                         opt_[opt_id] = train_op
 
                     # optimize
@@ -384,6 +386,7 @@ class Styler(StylerBase):
 
                 for t in range(0,self.num_frames,self.interp):
                     g_opt[t] += g_tmp[t]
+            #zxc -------------after training end-----------------------
 
             loss_history.append(loss_history_o)
             if octave < self.octave_n-1:
@@ -418,6 +421,7 @@ class Styler(StylerBase):
 
             self.sess.run(self.opt_init, feed)            
             p_, d_, d_img = self.sess.run([self.p_out, self.d_out, self.d_img], feed)
+            #zxc forward过程,d_img即图片
 
             if 'p' in self.target_field:
                 v_ = self.sess.run(self.v, feed)

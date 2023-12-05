@@ -11,8 +11,9 @@ from config import get_config
 from util import *
 from transform import g2p, p2g, p2g_wavg
 import sys
-sys.path.append('E:/partio/build/py/Release')
-import partio
+# sys.path.append('E:/partio/build/py/Release')
+# import partio
+#zxc G2P
 
 class SimG2P(object):
     def __init__(self, self_dict):
@@ -74,7 +75,7 @@ class SimG2P(object):
 
         self.opt_init = tf.compat.v1.initializers.variables([self.optv])
         self.opt = tf.compat.v1.train.AdamOptimizer(learning_rate=self.lr)
-        self.train_op = self.opt.minimize(self.loss, var_list=[self.optv])
+        self.train_op = self.opt.minimize(self.loss, var_list=[self.optv])#zxc G2P时的优化
 
         ############
         # multi-scale density sampling
@@ -119,7 +120,7 @@ class SimG2P(object):
         # pid = np.where(d > threshold)
         # add pt only in src region
         pid = np.where(d[76:124,231:279,16:64] > threshold)
-        pid = np.array(pid).transpose([1,0]).astype(np.float)
+        pid = np.array(pid).transpose([1,0]).astype(float)
         pid += np.array([76,231,16])
         
         cell_size = 1/disc
@@ -219,7 +220,8 @@ class SimG2P(object):
 def run(config):
     os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID" # so the IDs match nvidia-smi
     os.environ["CUDA_VISIBLE_DEVICES"] = config.gpu_id # "0, 1" for multiple
-
+    os.environ['KMP_DUPLICATE_LIB_OK']='TRUE' #add
+    tf.compat.v1.disable_eager_execution()    #add
     prepare_dirs_and_logger(config)
     tf.compat.v1.set_random_seed(config.seed)
     config.rng = np.random.RandomState(config.seed)
@@ -227,14 +229,16 @@ def run(config):
     resampler = SimG2P(config)
 
     # load input density fields
-    for t in trange(config.num_frames, desc='load density'): # last one for mask
+    for t in trange(config.num_frames, desc='load density'): # last one for mask zxc per FRAME
         d_path = os.path.join(config.data_dir, config.dataset, config.d_path % (config.target_frame+t))
+        print('--------------zxc dpath')
+        print(d_path)
         with np.load(d_path) as data:
             d = data['x'][:,::-1] # [D,H,W], [0-1]
     
-        # mantaflow dataset
+        #zxc mantaflow dataset
         v_path = os.path.join(config.data_dir, config.dataset, config.v_path % (config.target_frame+t))
-        with np.load(v_path) as data:
+        with np.load(v_path) as data:#zxc Grid DATA
             v_ = data['x'] # [D,H,W,3]
             vx = np.dstack((v_,np.zeros((v_.shape[0],v_.shape[1],1,v_.shape[3]))))
             vx = (vx[:,:,1:,0] + vx[:,:,:-1,0]) * 0.5
@@ -249,8 +253,7 @@ def run(config):
         vy = -v_[...,1] / v_.shape[1] * config.scale
         vz = v_[...,2] / v_.shape[0] * config.scale
         u = np.stack([vz,vy,vx], axis=-1)
-
-        if config.resampling: 
+        if config.resampling: #zxc如果config里没写，就不进行optimize
             if t == 0:
                 n_prev = 0
 
@@ -291,32 +294,63 @@ def run(config):
             px*config.domain[2],
             py*config.domain[1],
             pz*config.domain[0]], axis=-1)
-
-        # create a particle set and attributes
-        pt = partio.create()
-        pid = pt.addAttribute('id',partio.INT,1)
-        position = pt.addAttribute("position",partio.VECTOR,3)
-        if p_den.shape[1] > 1:
-            density = pt.addAttribute('density',partio.VECTOR,p_den.shape[1])
-        else:
-            density = pt.addAttribute('density',partio.FLOAT,1)
-        color = pt.addAttribute("Cd",partio.FLOAT,3)
-        radius = pt.addAttribute("radius",partio.FLOAT,1)
+        
+        # create a particle set and attributes zxc粒子属性
+        # pt = partio.create()
+        # pid = pt.addAttribute('id',partio.INT,1)
+        # position = pt.addAttribute("position",partio.VECTOR,3)
+        # if p_den.shape[1] > 1:
+        #     density = pt.addAttribute('density',partio.VECTOR,p_den.shape[1])
+        # else:
+        #     density = pt.addAttribute('density',partio.FLOAT,1)
+        # color = pt.addAttribute("Cd",partio.FLOAT,3)
+        # radius = pt.addAttribute("radius",partio.FLOAT,1)
+        
+        zpid=[]
+        zpos=[]
+        zden=[]
+        zcol=[]
+        zrad=[]
         
         for i in range(p_.shape[0]):
-            pt_ = pt.addParticle()
-            pt.set(pid, pt_, (int(p_id[i]),))
-            pt.set(position, pt_, tuple(p_[i].astype(np.float)))
+            # pt_ = pt.addParticle()
+            # pt.set(pid, pt_, (int(p_id[i]),))
+            # pt.set(position, pt_, tuple(p_[i].astype(np.float)))
+            # if p_den.shape[1] > 1:
+            #     pt.set(density, pt_, tuple(p_den[i].astype(np.float)))
+            # else:
+            #     pt.set(density, pt_, (float(p_den[i]),))
+            # pt.set(color, pt_, tuple(np.array([p_den[i,0]]*3,dtype=np.float)))
+            # pt.set(radius, pt_, (config.radius,))
+
+            #add
+            zpid.append(int(p_id[i]))
+            zpos.append(tuple(p_[i].astype(float)))
             if p_den.shape[1] > 1:
-                pt.set(density, pt_, tuple(p_den[i].astype(np.float)))
+                zden.append(tuple(p_den[i].astype(float)))
             else:
-                pt.set(density, pt_, (float(p_den[i]),))
-            pt.set(color, pt_, tuple(np.array([p_den[i,0]]*3,dtype=np.float)))
-            pt.set(radius, pt_, (config.radius,))
-        
+                zden.append((float(p_den[i]),)) 
+            zcol.append(tuple(np.array([p_den[i,0]]*3,dtype=float)))
+            zrad.append((config.radius,))
+
+        #add
+        zpid=np.array([zpid])
+        zpid=zpid.T
+        zden=np.array(zden)
+        zpos=np.array(zpos)
+        zsave=np.concatenate([zpid,zden,zpos],-1)
+        print("-----------zxc zpid shape----")
+        print(zpid.shape)
+        print(zden.shape)
+        print(zpos.shape)
+    
         # save particle
         p_path = os.path.join(config.log_dir, '%03d.bgeo' % (config.target_frame+t))
-        partio.write(p_path, pt)
+        # partio.write(p_path, pt)
+
+        #add
+        np.save(p_path,arr=zsave)
+        print('part saved---------------')
 
         # save density image
         transmit = np.exp(-np.cumsum(d_smp[::-1], axis=0)*config.transmit)
@@ -342,12 +376,13 @@ def run(config):
     #     pc = np.concatenate([p_den[:,0,None]]*3, axis=-1)
     # draw_pt([p_], pc=[pc], bbox=bbox, is_2d=False)
 
-def main(config):
+def main(config): 
     config.dataset = 'smokegun'
     config.d_path = 'd_low/%03d.npz'
     config.v_path = 'v_low/%03d.npz'
 
-    config.num_frames = 120
+    #prm from target_frame to tar+num
+    config.num_frames = 120 # default120
     config.target_frame = 0 # 120 - config.num_frames
 
     # config.target_frame = 60
@@ -374,7 +409,7 @@ def main(config):
         config.octave_scale = 1
 
     # resampling or naive advection
-    config.resampling = True
+    config.resampling = False # prm
     if config.resampling:
         config.tag = 'n%d_it%d_o%d' % (config.num_frames, config.iter, config.octave_n)
     else:

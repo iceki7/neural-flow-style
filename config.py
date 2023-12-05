@@ -14,10 +14,10 @@ def add_argument_group(name):
 
 # path
 path_arg = add_argument_group('Path')
-path_arg.add_argument("--data_dir", type=str, default='data')
+path_arg.add_argument("--data_dir", type=str, default='data')#prm
 path_arg.add_argument("--log_dir", type=str, default='log')
 path_arg.add_argument("--model_dir", type=str, default='model')
-path_arg.add_argument("--d_path", type=str, default='d/%03d.npz')
+path_arg.add_argument("--d_path", type=str, default='d/%03d.npz')#prm
 path_arg.add_argument("--v_path", type=str, default='v/%03d.npz')
 path_arg.add_argument("--tag", type=str, default='test')
 
@@ -31,7 +31,7 @@ data_arg.add_argument("--scale", type=float, default=2.0)
 # network
 network_arg = add_argument_group('Network')
 network_arg.add_argument("--network", type=str, default='tensorflow_inception_graph.pb',
-    choices=['tensorflow_inception_graph.pb','vgg_19.ckpt'])
+    choices=['tensorflow_inception_graph.pb','vgg_19.ckpt'])#prm
 network_arg.add_argument("--pool1", type=str2bool, default=False)
 network_arg.add_argument("--batch_size", type=int, default=1)
 

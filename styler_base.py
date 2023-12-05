@@ -16,8 +16,12 @@ class StylerBase(object):
 
         # inception network setting
         self.model_path = os.path.join(self.data_dir, self.model_dir, self.network)
+        print('----------zxc model path-----')
+        print(self.model_path)
+
         if 'inception' in self.model_path:
-            self.graph = tf.compat.v1.Graph()
+            print('------zxc Have Inception-----')#here
+            self.graph = tf.compat.v1.Graph()#zxc
             self.sess = tf.compat.v1.InteractiveSession(graph=self.graph)
             with tf.io.gfile.GFile(self.model_path, 'rb') as f:
                 self.graph_def = tf.compat.v1.GraphDef()
@@ -35,24 +39,26 @@ class StylerBase(object):
         if not np.isclose(self.resize_scale, 1):
             h = tf.cast(tf.multiply(float(self.resize_scale), tf.cast(tf.shape(d)[1], tf.float32)), tf.int32)
             w = tf.cast(tf.multiply(float(self.resize_scale), tf.cast(tf.shape(d)[2], tf.float32)), tf.int32)
-            d = tf.compat.v1.image.resize(d, (h,w), method=tf.image.ResizeMethod.BILINEAR) # upsample w/ BICUBIC -> artifacts
+            d = tf.compat.v1.image.resize(d, (h,w), method=tf.image.ResizeMethod.BILINEAR) #zxc upsample w/ BICUBIC -> artifacts
 
         # change the range of d image [0-1] to [0-255]
         d = d*255
         if not 'c' in self.target_field:
             d = tf.concat([d]*3, axis=-1) # [B,H,W,3]
         d = tf.reshape(d, [tf.shape(d)[0],tf.shape(d)[1],tf.shape(d)[2],3])
-        self.d_img = d
+        self.d_img = d #zxc
 
         # plug-in to the pre-trained network
         if 'vgg' in self.model_path:
+            print('-------zxc VGG1')
             self.sess = tf.compat.v1.InteractiveSession()
             self.layers = vgg.load_vgg(d, self.model_path, self.sess)
             print(self.layers.keys())
         else:
+            print('------zxc VGG2')#here
             # imagenet_mean = 117.0
             # d_preprocessed = d - vggimagenet_mean
-            tf.import_graph_def(self.graph_def, {'input': vgg.preprocess(d)})
+            tf.import_graph_def(self.graph_def, {'input': vgg.preprocess(d)})#把graph_def转换为默认graph
             self.layers = [op.name for op in self.graph.get_operations() if op.type=='Conv2D' and 'import/' in op.name]
             print(self.layers)
 
@@ -88,16 +94,21 @@ class StylerBase(object):
                 v = advect(v, tf.expand_dims(-self.u[a-1]*(a-b), axis=0))
         return v
 
-    def _layer(self, layer):
+    def _layer(self, layer):#调用CNN
         if 'input' in layer: return self.d_img
         if 'vgg' in self.model_path: return self.layers[layer]
-        else: return self.graph.get_tensor_by_name("import/%s:0" % layer)
+        else: 
+            # print('-----zxc _layer3') #here
+            # print(layer)
+            return self.graph.get_tensor_by_name("import/%s:0" % layer)
 
-    def _gram_matrix(self, x):
+    def _gram_matrix(self, x):#zxc
         g_ = []
         for i in range(self.batch_size):
             F = tf.reshape(x[i], (-1, x.shape[-1]))
             g = tf.matmul(tf.transpose(F), F)
+            print('--------zxc gram SHAPE')
+            print(tf.shape(F))
             g_.append(g)
         return tf.stack(g_, axis=0)
 
@@ -132,27 +143,29 @@ class StylerBase(object):
         self.hist_loss_layer = []
         self.total_loss = 0
 
-        if self.w_content:
+        if self.w_content:#zxc semantic
             feature = self._layer(self.content_layer) # assert only one layer
-            if self.content_img is not None:
-                self.content_feature = tf.compat.v1.placeholder(tf.float32, name='content_feature_%s' % self.content_layer)
+            if self.content_img is not None:#zxc 带图的content loss  ie content_target from config
+                print('---zxc HAVE content img')
+                self.content_feature = tf.compat.v1.placeholder(tf.float32, name='content_feature_%s' % self.content_layer)#zxc
                 # self.content_loss -= tf.reduce_mean(feature*self.content_feature) # dot
                 self.content_loss += tf.reduce_mean(tf.math.squared_difference(feature, 
                                                self.content_feature*self.w_content_amp))
             else:
+                print('---zxc NO content img')
                 if self.content_channel:
-                    self.content_loss -= tf.reduce_mean(feature[...,self.content_channel])
+                    self.content_loss -= tf.reduce_mean(feature[...,self.content_channel])#zxc
                     self.content_loss += tf.reduce_mean(tf.abs(feature[...,:self.content_channel]))
                     self.content_loss += tf.reduce_mean(tf.abs(feature[...,self.content_channel+1:]))
                 else:
                     self.content_loss -= tf.reduce_mean(feature)
 
-            self.total_loss += self.content_loss*self.w_content
+            self.total_loss += self.content_loss*self.w_content #zxc
 
-        if self.w_style and self.style_img is not None:
+        if self.w_style and self.style_img is not None:#zxc styler WITH image
             self.style_features = []
             for style_layer, w_style_layer in zip(self.style_layer, self.w_style_layer):
-                feature = self._layer(style_layer)
+                feature = self._layer(style_layer)#zxc 某层的特征
                 f_shp = tf.shape(feature)
                 gram_denom = tf.cast(2*f_shp[1]*f_shp[2]*f_shp[3], tf.float32)
                 
@@ -172,17 +185,18 @@ class StylerBase(object):
                         style_feature *= style_mask
                         style_denom = 2*area_mask*tf.cast(f_shp[3], tf.float32)
                 
-                gram = self._gram_matrix(feature)
+                gram = self._gram_matrix(feature)#zxc
                 gram /= gram_denom
 
                 style_gram = self._gram_matrix(style_feature)
                 style_gram /= style_denom
-
+                
+                #zxc
                 style_loss = tf.reduce_sum(tf.math.squared_difference(gram, style_gram))
                 self.style_loss_layer.append(style_loss)
                 self.style_loss += w_style_layer*style_loss
 
-            self.total_loss += self.style_loss*self.w_style
+            self.total_loss += self.style_loss*self.w_style #zxc
 
         if self.w_hist and self.style_img is not None:
             self.hist_features = []
@@ -206,11 +220,11 @@ class StylerBase(object):
                 self.hist_loss_layer.append(hist_loss)
                 self.hist_loss += w_style_layer*hist_loss
                         
-            self.total_loss += self.hist_loss*self.w_hist
+            self.total_loss += self.hist_loss*self.w_hist  #zxc
 
         if self.w_tv:
             self.tv_loss = tf.reduce_mean(tf.compat.v1.image.total_variation(self.d_img))
-            self.total_loss += self.tv_loss*self.w_tv
+            self.total_loss += self.tv_loss*self.w_tv #zxc
 
         #######
         # loss for density preservation
@@ -234,7 +248,7 @@ class StylerBase(object):
         if not np.isclose(self.resize_scale, 1):
             content_shp = [int(s*self.resize_scale) for s in content_shp]
         content_target_ = resize(content_target, content_shp, order=3) # bicubic for downsampling
-        feature = self._layer(self.content_layer)
+        feature = self._layer(self.content_layer)#zxc
         feature_ = self.sess.run(feature, {self.d_img: [content_target_]*self.batch_size})
 
         if self.top_k > 0:
@@ -249,8 +263,8 @@ class StylerBase(object):
     def _style_feature(self, style_target, style_shp=None):
         # mask for style texture
         style_m = None
-        if style_target.shape[-1] == 4:
-            style_m = style_target[...,-1]/255
+        if style_target.shape[-1] == 4:#zxc 如果是多色图片
+            style_m = style_target[...,-1]/255 #zxc  normalize
             style_target = style_target[...,:-1]
             style_target *= np.stack([style_m]*3, axis=-1)
         
@@ -263,9 +277,9 @@ class StylerBase(object):
 
         style_features = []
         for style_layer, w_style_layer in zip(self.style_layer, self.w_style_layer):
-            style_feature = self._layer(style_layer)
+            style_feature = self._layer(style_layer)#zxc style layer是个config param
             feed = {self.d_img: [style_target_]*self.batch_size}
-            style_feature_ = self.sess.run(style_feature, feed)
+            style_feature_ = self.sess.run(style_feature, feed)#zxc 把feed 放入style_feature，
 
             if style_m is not None:
                 feature_mask_ = resize(style_m, style_feature_.shape[1:-1], order=3) # bicubic for downsampling
@@ -326,6 +340,7 @@ class StylerBase(object):
             self.content_img = content_target
 
         if self.w_style > 0 and self.style_target:
+            print('----zxc self styleTarget')#zxc have
             style_target = np.float32(Image.open(self.style_target))
             # print(style_target.shape)
             if self.style_tiling > 1:
@@ -343,4 +358,4 @@ class StylerBase(object):
             #     style_target *= np.stack([style_m]*3, axis=-1)
             #     # plt.imshow(style_target/255); plt.show()
 
-            self.style_img = style_target
+            self.style_img = style_target #zxc

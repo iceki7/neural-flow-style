@@ -10,12 +10,25 @@ from config import get_config
 from util import *
 from styler_3p import Styler
 import sys
-sys.path.append('E:/partio/build/py/Release')
-import partio
+# sys.path.append('F:/yzx2/partio/build/py/Release')
+# sys.path.append(r'F:\yzx-2\partio\build\src\py\Release')
+# import partio
+print('------------------zxc import DONE')
 
+# https://blog.csdn.net/Abandon_first/article/details/115115000
 def run(config):
     os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID" # so the IDs match nvidia-smi
     os.environ["CUDA_VISIBLE_DEVICES"] = config.gpu_id # "0, 1" for multiple
+    os.environ['KMP_DUPLICATE_LIB_OK']='TRUE' #add
+    tf.compat.v1.disable_eager_execution()    #add
+
+
+
+
+    print(tf.test.is_gpu_available())
+    xx=tf.config.list_physical_devices('GPU')
+    print("----zxc GPU state")
+    print(xx)
 
     prepare_dirs_and_logger(config)
     tf.compat.v1.set_random_seed(config.seed)
@@ -30,33 +43,47 @@ def run(config):
     nmin, nmax = np.iinfo(np.int32).max, 0
     for i in range(config.num_frames):
         pt_path = os.path.join(config.data_dir, config.dataset, config.d_path % (config.target_frame+i))
-        pt = partio.read(pt_path)
-        p_num = pt.numParticles()
+        # pt = partio.read(pt_path)
+        # p_num = pt.numParticles()
+        #add
+        print('-----zxc particle Data path------')
+        print(pt_path)
+        pt=np.load(pt_path)
+        print(pt.shape)
+        p_num=pt.shape[0]
+        print(p_num)
         nmin, nmax = min(nmin,p_num), max(nmax,p_num)
 
     print('# range:', nmin, nmax)
     
     p, r = [], []
-    for i in trange(config.num_frames, desc='load particle'):
+    for i in trange(config.num_frames, desc='load particle'):#zxc 逐帧进行
         pt_path = os.path.join(config.data_dir, config.dataset, config.d_path % (config.target_frame+i))
-        pt = partio.read(pt_path)
-    
-        p_id = pt.attributeInfo('id')
-        p_pos = pt.attributeInfo('position')
-        p_den = pt.attributeInfo('density')
+        # pt = partio.read(pt_path)
+        # p_id = pt.attributeInfo('id')
+        # p_pos = pt.attributeInfo('position')
+        # p_den = pt.attributeInfo('density')
+        # add
+        zpt=np.load(pt_path)
+        print('---------zxc data LOADED!!!')
 
         p_ = np.ones([nmax,3], dtype=np.float32)*-1
         r_ = np.zeros([nmax,config.num_kernels], dtype=np.float32)
 
-        p_num = pt.numParticles()
-        for j in range(p_num):
-            p_id_j = pt.get(p_id, j)[0]
-            p_[j] = pt.get(p_pos, p_id_j)
-            r_[j] = pt.get(p_den, p_id_j)
+        # p_num = pt.numParticles()
+        p_num=zpt.shape[0]
+        for j in range(p_num):#zxc将partio读入的格式转换为了numpy，之后没再用过partio
+            # p_id_j = pt.get(p_id, j)[0]
+            # p_[j] = pt.get(p_pos, p_id_j)
+            # r_[j] = pt.get(p_den, p_id_j)
+
+            #add
+            p_[j] = zpt[j,2:]
+            r_[j] = zpt[j,1]
 
         r.append(r_)
 
-        # normalize particle position [0-1]
+        #zxc normalize particle position [0-1]
         px, py, pz = p_[...,0], p_[...,1], p_[...,2]
         px /= config.domain[2]
         py /= config.domain[1]
@@ -72,12 +99,16 @@ def run(config):
     print('normalized py range', py.min(), py.max())
     print('normalized pz range', pz.min(), pz.max())
 
-    params['p'] = p
-    params['r'] = r
+    params['p'] = p #pos
+    params['r'] = r #dens
+    print('--------zxc pr----')
+    print(len(p))
+    print(type(p[0]))
         
-    # styler.render_test(params)
-    result = styler.run(params)
-
+    styler.render_test(params)
+    print('--------------zxc start styler')
+    result = styler.run(params)#zxc
+    print('--------------zxc end styler')
     # save loss plot
     l = result['l']
     lb = []
@@ -91,7 +122,7 @@ def run(config):
 
     r_sty = result['r']
     for i, r_sty_ in enumerate(r_sty):
-        im = Image.fromarray(r_sty_)
+        im = Image.fromarray(r_sty_)#r_sty_ zxc
         d_path = os.path.join(config.log_dir, '%03d.png' % (config.target_frame+i))
         im.save(d_path)
 
@@ -110,11 +141,15 @@ def run(config):
         
 def main(config):
     config.dataset = 'smokegun'
-    
+
     # config.d_path = 'pt_low_o1/%03d.npz'
     # config.num_kernels = 1
 
     config.d_path = 'pt_low_o2/%03d.bgeo'
+    config.d_path='1128_152604_naive_n120/%03d.bgeo.npy'#prm
+    config.num_frames=1
+    config.target_frame=60
+    #zxc 从target_frame开始往后num_frame帧
     config.num_kernels = 2
 
     config.kernel_scale = 2
@@ -134,8 +169,11 @@ def main(config):
     config.window_sigma = 3
     config.batch_size = 1
     config.frames_per_opt = 1
-
-    config.target_field = 'd'
+    config.style_target='data/image/fire.png'#prm
+    config.style_target='data/image/volcano.png'#prm
+    config.w_content=0
+    config.w_style=1
+    config.target_field = 'd'#zxc
     config.lr = 0.1
     config.network = 'tensorflow_inception_graph.pb'
     config.style_layer = ['conv2d2','mixed3b','mixed4b']
@@ -161,7 +199,7 @@ def main(config):
     semantic = True
     density_reg = False
 
-    # if semantic:
+    # if semantic:zxc
     #     config.w_style = 0
     #     config.w_content = 1
     #     config.content_layer = 'mixed3b_3x3_bottleneck_pre_relu'

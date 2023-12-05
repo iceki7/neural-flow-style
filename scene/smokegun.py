@@ -13,10 +13,10 @@ try:
     from manta import *
 except ImportError:
     pass
-
+#zxc 生成数据集
 parser = argparse.ArgumentParser()
 
-parser.add_argument("--data_dir", type=str, default='data/smokegun')
+parser.add_argument("--data_dir", type=str, default='data/smokegun')#prm
 parser.add_argument("--num_param", type=int, default=3)
 parser.add_argument("--path_format", type=str, default='%03d.%s')
 
@@ -47,8 +47,9 @@ args = parser.parse_args()
 def downup_sample():
     # d_path = os.path.join(args.data_dir, 'd_low')
     # v_path = os.path.join(args.data_dir, 'v_low')
-    d_path = os.path.join('E:/lnst/data/smokegun', 'd_low')
-    v_path = os.path.join('E:/lnst/data/smokegun', 'v_low')
+    #prm
+    d_path = os.path.join('F:/yzx-2/neural-flow-style-FORK/neural-flow-style/data/smokegun', 'd_low')
+    v_path = os.path.join('F:/yzx-2/neural-flow-style-FORK/neural-flow-style/data/smokegun', 'v_low')
     for f_path in [d_path, v_path]:
         if not os.path.exists(f_path):
             os.mkdir(f_path)
@@ -159,7 +160,7 @@ def main():
     s = Solver(name='main', gridSize=gs, dim=3)
     s.timestep = args.time_step
 
-    flags = s.create(FlagGrid)
+    flags = s.create(FlagGrid)#zxc
     vel = s.create(MACGrid)
     density = s.create(RealGrid)
     pressure = s.create(RealGrid)
@@ -171,7 +172,7 @@ def main():
 
     radius = gs.x*args.src_radius
     center = gs*vec3(args.src_x_pos,args.src_y_pos,args.src_z_pos)
-    source = s.create(Sphere, center=center, radius=radius)
+    source = s.create(Sphere, center=center, radius=radius)#zxc
 
     if args.obstacle:
         obs_radius = gs.x*0.15
@@ -191,7 +192,7 @@ def main():
         # save density
         copyGridToArrayReal(density, d_)
         d_file_path = os.path.join(args.data_dir, 'd', args.path_format % (t, 'npz'))
-        np.savez_compressed(d_file_path, x=d_)
+        np.savez_compressed(d_file_path, x=d_)#zxc
 
         d_file_path = os.path.join(args.data_dir, 'd', args.path_format % (t, 'png'))
         transmit = np.exp(-np.cumsum(d_[::-1], axis=0)*args.transmit)
@@ -205,6 +206,7 @@ def main():
         copyGridToArrayMAC(vel, v_)
         np.savez_compressed(v_file_path, x=v_)
 
+        #zxc 以下为模拟步骤
         advectSemiLagrange(flags=flags, vel=vel, grid=density, order=args.adv_order,
                             openBounds=args.open_bound, boundaryWidth=args.bWidth, clampMode=args.clamp_mode)
 

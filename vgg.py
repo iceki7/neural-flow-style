@@ -10,7 +10,8 @@ import tensorflow as tf
 from collections import OrderedDict
 import os
 
-slim = tf.contrib.slim
+#slim = tf.contrib.slim zxc rep
+import tf_slim as slim
 
 # _R_MEAN = 123.68
 # _G_MEAN = 116.779

@@ -5,7 +5,7 @@ REM activate env
 call .\venv\Scripts\activate
 
 REM -------------------------------------------------------
-REM generate a smokegun dataset
+REM generate a smokegun dataset zxc
 ..\manta\build\Release\manta.exe ./scene/smokegun.py
 
 REM generate a particle-based dataset from smokegun
