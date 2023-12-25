@@ -25,11 +25,8 @@ def run(config):
 
 
 
-    print(tf.test.is_gpu_available())
-    xx=tf.config.list_physical_devices('GPU')
-    print("----zxc GPU state")
-    print(xx)
-
+  
+    
     prepare_dirs_and_logger(config)
     tf.compat.v1.set_random_seed(config.seed)
     config.rng = np.random.RandomState(config.seed)
@@ -105,7 +102,7 @@ def run(config):
     print(len(p))
     print(type(p[0]))
         
-    styler.render_test(params)
+    # styler.render_test(params)
     print('--------------zxc start styler')
     result = styler.run(params)#zxc
     print('--------------zxc end styler')
@@ -171,6 +168,7 @@ def main(config):
     config.frames_per_opt = 1
     config.style_target='data/image/fire.png'#prm
     config.style_target='data/image/volcano.png'#prm
+    config.style_target='data/image/turbulence.png'#prm
     config.w_content=0
     config.w_style=1
     config.target_field = 'd'#zxc
