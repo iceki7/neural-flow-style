@@ -1,10 +1,11 @@
 import tensorflow as tf
 print('--------------------zxc start--------------------------------')
-print("Num GPUs Available: ", len(tf.config.list_physical_devices('GPU')))
+print(tf.__version__)
 
-xx=tf.config.list_physical_devices('GPU')
+gpus=tf.config.list_physical_devices('GPU')
 print("----zxc GPU state")
-print(xx)
+print(gpus)
+
 gpus = tf.config.experimental.list_physical_devices(device_type='GPU')
 cpus = tf.config.experimental.list_physical_devices(device_type='CPU')
 print(gpus, cpus)

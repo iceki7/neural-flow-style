@@ -15,6 +15,7 @@ class Styler(StylerBase):
     def __init__(self, self_dict):
         StylerBase.__init__(self, self_dict)
 
+        print("zxc rotate="+str(self.rotate))
         # particle position
         # shape: [N,3], scale: [0,1]
         p = []
@@ -300,7 +301,7 @@ class Styler(StylerBase):
                 lr = self.lr
 
             # optimizer list for each batch
-            for step in trange(self.iter,desc='iter'):#zxc iter loop 很耗时
+            for step in trange(self.iter,desc='[Optimize] iter'):#zxc iter loop 很耗时
                 g_tmp = [None]*self.num_frames
 
                 for t in range(0,self.num_frames,self.batch_size*self.interp):
@@ -404,7 +405,7 @@ class Styler(StylerBase):
             'l': loss_history, 'd_intm': d_intm,
             'v': None, 'c': None}
 
-        # final inference
+        # final inference zxc
         p_sty = [None]*self.num_frames
         v_sty = [None]*self.num_frames
         r_sty = [None]*self.num_frames

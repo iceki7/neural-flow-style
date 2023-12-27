@@ -613,8 +613,8 @@ def rotate(d):
     xlen = tf.shape(d)[1]
     ylen = tf.shape(d)[2]
     zlen = tf.shape(d)[3]
-    
-    rot_mat = tf.placeholder(shape=[None,3,3], dtype=tf.float32)
+    tf.compat.v1.disable_eager_execution()#zxc add
+    rot_mat = tf.compat.v1.placeholder(shape=[None,3,3], dtype=tf.float32)
     n_rot = tf.shape(rot_mat)[0]
     n_batch = b*n_rot
 

@@ -9,6 +9,7 @@ from tqdm import trange
 from config import get_config
 from util import *
 from styler_3p import Styler
+import time
 import sys
 # sys.path.append('F:/yzx2/partio/build/py/Release')
 # sys.path.append(r'F:\yzx-2\partio\build\src\py\Release')
@@ -62,7 +63,6 @@ def run(config):
         # p_den = pt.attributeInfo('density')
         # add
         zpt=np.load(pt_path)
-        print('---------zxc data LOADED!!!')
 
         p_ = np.ones([nmax,3], dtype=np.float32)*-1
         r_ = np.zeros([nmax,config.num_kernels], dtype=np.float32)
@@ -107,7 +107,7 @@ def run(config):
     result = styler.run(params)#zxc
     print('--------------zxc end styler')
     # save loss plot
-    l = result['l']
+    l = result['l']#zxc res LossCurve
     lb = []
     for o, l_ in enumerate(l):
         lb_, = plt.plot(range(len(l_)), l_, label='oct %d' % o)
@@ -120,7 +120,7 @@ def run(config):
     r_sty = result['r']
     for i, r_sty_ in enumerate(r_sty):
         im = Image.fromarray(r_sty_)#r_sty_ zxc
-        d_path = os.path.join(config.log_dir, '%03d.png' % (config.target_frame+i))
+        d_path = os.path.join(config.log_dir, '%03d.png' % (config.target_frame+i))#zxc res
         im.save(d_path)
 
     d_sty = result['d']
@@ -129,7 +129,7 @@ def run(config):
         np.savez_compressed(d_path, x=d_sty_[:,::-1])
 
     d_intm = result['d_intm']
-    for o, d_intm_o in enumerate(d_intm):
+    for o, d_intm_o in enumerate(d_intm):#zxc 没有执行
         for i, d_intm_ in enumerate(d_intm_o):
             if d_intm_ is None: continue
             im = Image.fromarray(d_intm_)
@@ -145,7 +145,7 @@ def main(config):
     config.d_path = 'pt_low_o2/%03d.bgeo'
     config.d_path='1128_152604_naive_n120/%03d.bgeo.npy'#prm
     config.num_frames=1
-    config.target_frame=60
+    config.target_frame=50
     #zxc 从target_frame开始往后num_frame帧
     config.num_kernels = 2
 
@@ -233,5 +233,10 @@ def main(config):
     run(config)
     
 if __name__ == "__main__":
+    stm=time.time()#1970 secs
+
     config, unparsed = get_config()
     main(config)
+    
+    etm=time.time()
+    print('time(s)\t'+str(etm-stm))
