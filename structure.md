@@ -1,3 +1,7 @@
+depend:
+
+	numpy 1.25.0	/1.23.1
+
 styler.init
 	stylebase.init
 		read Inception
@@ -22,3 +26,5 @@ feed[r[1]]=xx
 
 
 实际上不需要vgg....tar.gz。
+
+总iter=iter*framenum
